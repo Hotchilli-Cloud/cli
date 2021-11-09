@@ -1,4 +1,4 @@
-module github.com/bijeshos/go-cli-examples/deployer
+module github.com/Hotchilli-Cloud/cli
 
 go 1.14
 
