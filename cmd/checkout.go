@@ -10,7 +10,7 @@ import (
 	"net/http"
 
 	"bytes"
-    "encoding/json"
+	"encoding/json"
 )
 
 func init() {
@@ -19,14 +19,14 @@ func init() {
 	checkoutCmd.AddCommand(sessionCmd)
 	sessionCmd.AddCommand(getSessionCmd)
 	getSessionCmd.Flags().String("id", "", "Checkout session ID")
-
+	getSessionCmd.Flags().String("extend", "", "Extend API Request - Go deeper in struct")
 
 }
 
 var checkoutCmd = &cobra.Command{
-	Use:     "checkout",
-	Short:   "Deploy artifacts (web, api or database)",
-	Long:    `This command can be used together with web, api or database sub-commands to deploy respective artifacts`,
+	Use:   "checkout",
+	Short: "Deploy artifacts (web, api or database)",
+	Long:  `This command can be used together with web, api or database sub-commands to deploy respective artifacts`,
 }
 
 var sessionCmd = &cobra.Command{
@@ -42,31 +42,38 @@ var getSessionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// *** add code to invoke automation end points below ***
 		id, _ := cmd.Flags().GetString("id")
-		getCheckoutSession(id)
+		extend, _ := cmd.Flags().GetString("extend")
+
+		getCheckoutSession(id, extend)
 	},
 }
 
+func getCheckoutSession(id string, extend string) {
+	var urlQuery string
+	if extend != "" {
+		urlQuery = "?extend=" + extend
+	} else {
+		urlQuery = ""
+	}
+	resp, err := http.Get("http://localhost:3500/checkout/session/" + id + urlQuery)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-func getCheckoutSession(id string) {
-		resp, err := http.Get("http://localhost:3500/checkout/session/item/" + id)
-		if err != nil {
-			log.Fatalln(err)
-		}
+	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
 
-		body, err := ioutil.ReadAll(resp.Body)
-		defer resp.Body.Close()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-		if err != nil {
-			log.Fatalln(err)
-		}
+	var prettyJSON bytes.Buffer
+	error := json.Indent(&prettyJSON, body, "", "\t")
 
-		var prettyJSON bytes.Buffer
-    	error := json.Indent(&prettyJSON, body, "", "\t")
+	if error != nil {
+		log.Println("JSON parse error: ", error)
+		return
+	}
 
-		if error != nil {
-			log.Println("JSON parse error: ", error)
-			return
-		}
-
-		log.Println(prettyJSON.String())
+	log.Println(prettyJSON.String())
 }
